@@ -1,16 +1,9 @@
-from time import sleep
+from threading import Thread
 
-from apiwrapper import APIWrapper
-from settings import logger, Settings
+import data_gatherer
+import app
 
-wrapper = APIWrapper()
-settings = Settings()
+data_thread = Thread(target=data_gatherer.start_loop)
+data_thread.start()
 
-logger.info('Starting main loop')
-while True:
-    logger.debug('Starting new iteration')
-    prices = wrapper.pair_prices()
-
-    logger.debug(f'Going to sleep for {settings.LOOP_INTERVAL} seconds')
-    sleep(settings.LOOP_INTERVAL)
-
+app.app.run_server(debug=True)
