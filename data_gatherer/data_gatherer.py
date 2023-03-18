@@ -1,8 +1,8 @@
 from time import sleep
 
-from apiwrapper import APIWrapper
+from wrappers.api_wrapper import APIWrapper
 from settings import logger, Settings, MongoSettings
-from db_wrapper import get_database
+from wrappers.db_wrapper import get_database
 
 settings = Settings()
 mongo_settings = MongoSettings()

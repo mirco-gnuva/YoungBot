@@ -4,7 +4,7 @@ import plotly.express as px
 import pandas as pd
 from time import time
 
-from db_wrapper import get_database
+from wrappers.db_wrapper import get_database
 from settings import logger, MongoSettings, DashboardSettings
 
 mongo_settings = MongoSettings()

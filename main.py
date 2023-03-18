@@ -1,7 +1,7 @@
 from threading import Thread
 
-import data_gatherer
-import app
+from data_gatherer import data_gatherer
+from dashboard import app
 
 data_thread = Thread(target=data_gatherer.start_loop)
 data_thread.start()

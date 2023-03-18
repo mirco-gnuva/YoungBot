@@ -1,4 +1,4 @@
-from apiwrapper import APIWrapper
+from wrappers.api_wrapper import APIWrapper
 import models
 import pytest
 
