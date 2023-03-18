@@ -7,6 +7,7 @@ from typing import Optional
 class Settings(BaseSettings):
     LOG_LEVEL: str = 'INFO'
     LOG_ROOT: Optional[str]
+    LOOP_INTERVAL: int = 5
 
 class YoungPlatformSettings(BaseSettings):
     host: str = 'https://api.youngplatform.com/api/v3'
