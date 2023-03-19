@@ -2,8 +2,8 @@ import requests
 from requests.adapters import HTTPAdapter, Retry
 from typing import Literal
 
-from settings import YoungPlatformSettings, logger
-import models
+from src.settings import YoungPlatformSettings, logger
+from src import models
 
 yp_settings = YoungPlatformSettings()
 

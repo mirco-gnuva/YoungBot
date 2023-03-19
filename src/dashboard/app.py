@@ -4,8 +4,9 @@ import plotly.express as px
 import pandas as pd
 from time import time
 
-from wrappers.db_wrapper import get_database
-from settings import logger, MongoSettings, DashboardSettings
+from src.wrappers.db_wrapper import get_database
+from src.settings import logger, MongoSettings, DashboardSettings
+from src.bot import bot
 
 mongo_settings = MongoSettings()
 dashboard_settings = DashboardSettings()
@@ -36,6 +37,11 @@ def update_price_graph(n):
     start = time()
     price_data = pd.DataFrame(db[mongo_settings.db_price_collection].find())
     fig = px.line(price_data, x='datetime', y='close', title='Price')
+    strategies = bot.get_running_strategies()
+    print(strategies)
+    for strategy in strategies:
+        strategy.enrich_plot(fig)
+
     price_graph.figure = fig
     logger.debug(f'Price graph updated in {time() - start} seconds')
     return fig

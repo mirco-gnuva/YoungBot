@@ -1,5 +1,5 @@
-from wrappers.api_wrapper import APIWrapper
-import models
+from src.wrappers.api_wrapper import APIWrapper
+from src import models
 import pytest
 
 wrapper = APIWrapper()

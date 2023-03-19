@@ -1,7 +1,7 @@
 from pymongo import MongoClient
 import urllib
 
-from settings import MongoSettings, logger
+from src.settings import MongoSettings, logger
 
 mongo_settings = MongoSettings()
 

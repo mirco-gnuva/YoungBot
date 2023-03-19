@@ -21,7 +21,7 @@ class MongoSettings(BaseSettings):
     db_password: str
     db_database: str = 'YoungBot'
     db_price_collection: str = 'price'
-
+    db_strategy_collection: str = 'strategy'
 
 class DashboardSettings(BaseSettings):
     update_interval: int = 5
