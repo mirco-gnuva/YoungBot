@@ -7,7 +7,7 @@ from typing import Optional
 class Settings(BaseSettings):
     LOG_LEVEL: str = 'INFO'
     LOG_ROOT: Optional[str]
-    LOOP_INTERVAL: int = 5
+    LOOP_INTERVAL: int = 30
 
 
 class YoungPlatformSettings(BaseSettings):
@@ -22,9 +22,10 @@ class MongoSettings(BaseSettings):
     db_database: str = 'YoungBot'
     db_price_collection: str = 'price'
     db_strategy_collection: str = 'strategy'
+    db_strategy_history_collection: str = 'strategy_history'
 
 class DashboardSettings(BaseSettings):
-    update_interval: int = 5
+    update_interval: int = 10
 
 
 

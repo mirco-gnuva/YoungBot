@@ -28,22 +28,13 @@ def save_pair_close_price(prices: models.PairPricesModel):
 
 def get_running_strategies():
     logger.debug('Getting running strategies')
-    results = db[mongo_settings.db_strategy_collection].find({'status': {'$in': [StrategyStatus.RUNNING.value, StrategyStatus.NEW.value]}})
-    strategies = [pickle.loads(result['instance']) for result in results]
+    collection = db[mongo_settings.db_strategy_collection]
+    history_collection = db[mongo_settings.db_strategy_history_collection]
+    results = collection.find({'status': {'$in': [StrategyStatus.RUNNING.value, StrategyStatus.NEW.value]}})
+    results = list(results)
+    strategies = [strategy.factory[result['metadata']]() for result in results]
+    [st.load(data, collection, history_collection) for st, data in zip(strategies, results)]
     return strategies
-
-
-def save_strategy(strategy: strategy.Strategy) -> bool:
-    model = strategy.as_model()
-
-    exists = db[mongo_settings.db_strategy_collection].find({'strategy_id': model.strategy_id}).count() > 0
-    
-    if exists:
-        result = db[mongo_settings.db_strategy_collection].update_one({'strategy_id': model.strategy_id})
-
-    logger.debug(f'Going to save strategy to MongoDB: {strategy}')
-    result = db[mongo_settings.db_strategy_collection].insert_one(model.dict())
-    return result.acknowledged
 
 
 def start_loop():
@@ -55,11 +46,9 @@ def start_loop():
 
         strategies = get_running_strategies()
 
+        # TODO: convert to async
         for strategy in strategies:
             strategy.check(prices)
-            if strategy.changed:
-                save_strategy(strategy)
-                strategy.mark_saved()
 
         logger.debug(f'Going to sleep for {settings.LOOP_INTERVAL} seconds')
         sleep(settings.LOOP_INTERVAL)
