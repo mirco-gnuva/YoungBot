@@ -5,6 +5,7 @@ from uuid import UUID, uuid4
 
 from src.enums import StrategyStatus
 
+
 class PairPricesModel(BaseModel):
     pair: str
     open: float
@@ -21,7 +22,7 @@ class PairPricesModel(BaseModel):
 
     def __init__(self, **data):
         super().__init__(**data)
-        self.datetime = datetime.fromtimestamp(self.timestamp/1000)
+        self.datetime = datetime.fromtimestamp(self.timestamp / 1000)
 
 
 class StrategyModel(BaseModel):

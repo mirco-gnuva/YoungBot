@@ -19,7 +19,8 @@ app = Dash(__name__)
 
 price_data = pd.DataFrame(db[mongo_settings.db_price_collection].find())
 
-fig = px.scatter(price_data, x='datetime', y='close', title='Price')
+fig = px.line(price_data, x='datetime', y='close', title='Price', render_mode='webg1')
+fig.update_xaxes(rangeslider_visible=True)
 
 price_graph = dcc.Graph(figure=fig, id='price-graph')
 
@@ -37,7 +38,7 @@ def update_price_graph(n):
     logger.debug('Updating price graph')
     start = time()
     price_data = pd.DataFrame(db[mongo_settings.db_price_collection].find())
-    fig = px.line(price_data, x='datetime', y='close', title='Price')
+    fig = px.line(price_data, x='datetime', y='close', title='Price', render_mode='webg1')
 
     strategies = bot.get_running_strategies()
     for strategy in strategies:
