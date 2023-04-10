@@ -1,14 +1,12 @@
+import math
 from datetime import datetime
 from uuid import UUID, uuid4
 import pandas as pd
 import plotly.graph_objects as go
-import plotly.express as px
 from pymongo.collection import Collection
-from pymongo.database import Database
 
 import models
 from src.enums import StrategyStatus
-import pickle
 
 from src.settings import logger, MongoSettings
 
@@ -45,8 +43,6 @@ class Strategy:
             logger.info(f'Strategy saved: {self.strategy_id}')
         else:
             logger.error(f'Error while saving strategy: {self.strategy_id}')
-
-
 
     def triggered(self, *args, **kwargs) -> bool:
         raise NotImplementedError
@@ -121,22 +117,38 @@ class Strategy:
         self.status = StrategyStatus(data['status'])
 
 
-class BuyTickStrategy(Strategy):
+class TickStrategy(Strategy):
     last_value: float = None
+    plot_color: str = None
+    default_activation: float = None
 
-    def __init__(self, tick: float = None, budget: float = None, collection: Collection = None, history_collection: Collection = None):
+    def __init__(self, activation: float = None, tick: float = None, budget: float = None,
+                 collection: Collection = None, history_collection: Collection = None):
         super().__init__(collection, history_collection)
         self.budget = budget
         self.tick = tick
+        self.activation = activation
+
+    def _active(self, prices: models.PairPricesModel) -> bool:
+        if self.status == StrategyStatus.NEW and prices.close <= self.activation:
+            self.status = StrategyStatus.RUNNING
+
+        return self.status not in [StrategyStatus.COMPLETED, StrategyStatus.FAILED, StrategyStatus.NEW]
 
     def __str__(self):
-        return f'{self.last_value}'
+        return f'{self.__class__.__name__}: Status: {self.status} | Last value: {self.last_value} | Budget: {self.budget} | Tick: {self.tick}'
+
+    def _triggered(self, prices: models.PairPricesModel) -> bool:
+        raise NotImplementedError
 
     def _check(self, prices: models.PairPricesModel):
+        if not self._active(prices):
+            return
+
         if self.last_value is None:
             self.last_value = prices.close
             self._changed = True
-        elif self.triggered(prices):
+        elif self._triggered(prices):
             logger.debug(f'Strategy triggered: {self} with price {prices.close}')
             self.status = StrategyStatus.TRIGGERED
             self.run()
@@ -144,12 +156,12 @@ class BuyTickStrategy(Strategy):
         elif self.status not in [StrategyStatus.COMPLETED, StrategyStatus.FAILED]:
             self._changed = self.update(prices)
 
-    def triggered(self, prices: models.PairPricesModel) -> bool:
-        return prices.close >= self.threshold
-
     @property
     def threshold(self) -> float:
-        return self.last_value + self.tick
+        raise NotImplementedError
+
+    def _better_price(self, prices: models.PairPricesModel) -> bool:
+        raise NotImplementedError
 
     def update(self, prices: models.PairPricesModel) -> bool:
         """If latest price is lower than the last value, update it and return True, otherwise return False.
@@ -165,7 +177,7 @@ class BuyTickStrategy(Strategy):
             True if last value was updated, False otherwise
         """
 
-        if prices.close < self.last_value:
+        if self._better_price(prices):
             logger.debug(f'Updating last value from {self.last_value} to {prices.close}')
             self.last_value = prices.close
             return True
@@ -174,29 +186,62 @@ class BuyTickStrategy(Strategy):
     def run(self):
         self.status = StrategyStatus.RUNNING
         logger.debug(f'Running strategy: {self}')
-        # TODO: implement buy logic
+        # TODO: implement specific logic
         self.status = StrategyStatus.COMPLETED
 
     def enrich_plot(self, plot: go.Figure):
         if self.last_value:
-            plot.add_hrect(y0=self.last_value, y1=self.threshold, line_width=0, fillcolor='green', opacity=0.25)
+            plot.add_hrect(y0=self.last_value, y1=self.threshold, line_width=0, fillcolor=self.plot_color, opacity=0.25)
 
         history = self.history_collection.find({'strategy_id': self.strategy_id})
         history_df = pd.DataFrame(history)
         if not history_df.empty:
-            plot.add_scatter(x=history_df['datetime'], y=history_df['last_value'], line_color='green', name=str(self))
-
+            plot.add_scatter(x=history_df['datetime'], y=history_df['last_value'], line_color=self.plot_color,
+                             name=str(self))
 
     def _load(self, data: dict):
         self.last_value = data['last_value']
         self.budget = data['budget']
         self.tick = data['tick']
+        self.activation = data.get('activation', self.default_activation)
 
     def _to_dict(self) -> dict:
         data = {'last_value': self.last_value,
                 'budget': self.budget,
-                'tick': self.tick}
+                'tick': self.tick,
+                'activation': self.activation}
         return data
 
 
-factory = {'BuyTickStrategy': BuyTickStrategy}
+class BuyTickStrategy(TickStrategy):
+    plot_color = 'green'
+    default_activation = math.inf
+
+    def _triggered(self, prices: models.PairPricesModel) -> bool:
+        return prices.close >= self.threshold
+
+    @property
+    def threshold(self) -> float:
+        return self.last_value + self.tick
+
+    def _better_price(self, prices: models.PairPricesModel) -> bool:
+        return prices.close < self.last_value
+
+
+class SellTickStrategy(TickStrategy):
+    plot_color = 'red'
+    default_activation = 0
+
+    def _triggered(self, prices: models.PairPricesModel) -> bool:
+        return prices.close <= self.threshold
+
+    @property
+    def threshold(self) -> float:
+        return self.last_value - self.tick
+
+    def _better_price(self, prices: models.PairPricesModel) -> bool:
+        return prices.close > self.last_value
+
+
+factory = {'BuyTickStrategy': BuyTickStrategy,
+           'SellTickStrategy': SellTickStrategy}

@@ -29,7 +29,12 @@ class APIWrapper:
 
         session.mount(prefix, HTTPAdapter(max_retries=retries))
 
-        response = session.request(method, url, **kwargs)
+        try:
+            response = session.request(method, url, **kwargs)
+        except requests.exceptions.RetryError as e:
+            logger.error(f'{e}')
+            response = requests.Response()
+            response.status_code = 500
 
         if response.status_code >= 400:
             logger.warning(f'Got status code {response.status_code} from {url}: {response.text}')
